@@ -101,12 +101,12 @@ func TestSpotifyCachedClient(t *testing.T) {
 	}
 }
 
-func TestSaveProfile(t *testing.T) {
+func TestUpdateProfile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 	cfg := config.Default()
 	ctx := &Context{Config: cfg, ConfigPath: path, ProfileKey: "default"}
-	if err := ctx.SaveProfile(config.Profile{Market: "US"}); err != nil {
+	if err := ctx.UpdateProfile(func(profile *config.Profile) { profile.Market = "US" }); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	loaded, err := config.Load(path)
@@ -118,9 +118,9 @@ func TestSaveProfile(t *testing.T) {
 	}
 }
 
-func TestSaveProfileNilContext(t *testing.T) {
+func TestUpdateProfileNilContext(t *testing.T) {
 	var ctx *Context
-	if err := ctx.SaveProfile(config.Profile{Market: "US"}); err == nil {
+	if err := ctx.UpdateProfile(func(profile *config.Profile) { profile.Market = "US" }); err == nil {
 		t.Fatalf("expected error")
 	}
 }

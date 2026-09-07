@@ -94,6 +94,10 @@ func (cmd *AuthOAuthLoginCmd) Run(ctx *app.Context) error {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if r.URL.Path != callbackPath {
+			http.NotFound(w, r)
+			return
+		}
 		if r.Host != parsedRedirect.Host {
 			http.Error(w, "invalid callback host", http.StatusBadRequest)
 			return
@@ -169,18 +173,15 @@ func (cmd *AuthOAuthLoginCmd) Run(ctx *app.Context) error {
 	}
 	path := ctx.ResolveOAuthTokenPath()
 	if err := spotify.WithOAuthLifecycleLock(ctx.CommandContext(), path, func() error {
-		profile, err := reloadOAuthProfile(ctx)
-		if err != nil {
-			return err
-		}
 		if _, err := provider.ExchangeCode(ctx.CommandContext(), callback.code, verifier); err != nil {
 			return err
 		}
 		afterOAuthTokenExchange()
-		profile.Auth = "oauth"
-		profile.SpotifyClientID = clientID
-		profile.SpotifyRedirectURI = redirectURI
-		if err := ctx.SaveProfile(profile); err != nil {
+		if err := ctx.UpdateProfile(func(profile *config.Profile) {
+			profile.Auth = "oauth"
+			profile.SpotifyClientID = clientID
+			profile.SpotifyRedirectURI = redirectURI
+		}); err != nil {
 			return fmt.Errorf("oauth token saved but profile update failed: %w", err)
 		}
 		return nil
@@ -241,15 +242,12 @@ func (cmd *AuthOAuthStatusCmd) Run(ctx *app.Context) error {
 func (cmd *AuthOAuthClearCmd) Run(ctx *app.Context) error {
 	path := ctx.ResolveOAuthTokenPath()
 	if err := spotify.WithOAuthLifecycleLock(ctx.CommandContext(), path, func() error {
-		profile, err := reloadOAuthProfile(ctx)
-		if err != nil {
-			return err
-		}
-		if selectedAuth(profile.Auth) == "oauth" {
-			profile.Auth = ""
-			if err := ctx.SaveProfile(profile); err != nil {
-				return err
+		if err := ctx.UpdateProfile(func(profile *config.Profile) {
+			if selectedAuth(profile.Auth) == "oauth" {
+				profile.Auth = ""
 			}
+		}); err != nil {
+			return err
 		}
 		return spotify.ClearOAuthToken(path)
 	}); err != nil {
@@ -257,16 +255,6 @@ func (cmd *AuthOAuthClearCmd) Run(ctx *app.Context) error {
 	}
 	payload := map[string]string{"status": "ok", "token_path": path}
 	return ctx.Output.Emit(payload, []string{"ok"}, []string{"Cleared Spotify OAuth token cache."})
-}
-
-func reloadOAuthProfile(ctx *app.Context) (config.Profile, error) {
-	cfg, err := config.Load(ctx.ConfigPath)
-	if err != nil {
-		return config.Profile{}, fmt.Errorf("reload oauth profile: %w", err)
-	}
-	ctx.Config = cfg
-	ctx.Profile = cfg.Profile(ctx.ProfileKey)
-	return ctx.Profile, nil
 }
 
 func selectedAuth(auth string) string {

@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -394,5 +395,73 @@ func TestNormalize(t *testing.T) {
 	cfg.normalize()
 	if cfg.DefaultProfile == "" || cfg.Profiles == nil {
 		t.Fatalf("expected defaults")
+	}
+}
+
+func TestSavePreservesConfigSymlink(t *testing.T) {
+	for _, existing := range []bool{true, false} {
+		t.Run(fmt.Sprint(existing), func(t *testing.T) {
+			dir := t.TempDir()
+			target := filepath.Join(dir, "managed.toml")
+			link := filepath.Join(dir, "config.toml")
+			if existing {
+				if err := Save(target, Default()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.Symlink("managed.toml", link); err != nil {
+				t.Skipf("symlink unavailable: %v", err)
+			}
+			cfg := Default()
+			cfg.SetProfile("default", Profile{Market: "AT"})
+			if err := Save(link, cfg); err != nil {
+				t.Fatal(err)
+			}
+			if destination, err := os.Readlink(link); err != nil || destination != "managed.toml" {
+				t.Fatalf("config link replaced: %q %v", destination, err)
+			}
+			loaded, err := Load(target)
+			if err != nil || loaded.Profile("default").Market != "AT" {
+				t.Fatalf("target was not updated: %v", err)
+			}
+		})
+	}
+}
+
+func TestUpdateConfigAliasesShareLock(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "managed.toml")
+	link := filepath.Join(dir, "config.toml")
+	if err := Save(target, Default()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	_, err := Update(context.Background(), target, func(*Config) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		defer cancel()
+		_, err := Update(ctx, link, func(*Config) error { t.Error("alias bypassed config lock"); return nil })
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("alias lock error: %v", err)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSaveRejectsCyclicConfigSymlinks(t *testing.T) {
+	dir := t.TempDir()
+	a, b := filepath.Join(dir, "a"), filepath.Join(dir, "b")
+	if err := os.Symlink(b, a); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if err := os.Symlink(a, b); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(a, Default()); err == nil {
+		t.Fatal("expected symlink cycle error")
 	}
 }

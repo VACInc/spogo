@@ -146,7 +146,7 @@ Official OAuth is available for the Web API client. Register `http://127.0.0.1:8
 ## Auto engine notes
 
 - `auto` tries connect first, then falls back to web on unsupported features or rate limits.
-- On macOS, playback status and playback controls try the local Spotify.app through AppleScript only after both remote engines fail, including when cookies are unavailable. Search, library, playlists, queues, and devices never use this local fallback.
+- On macOS, playback status and playback controls can recover through the local Spotify.app using AppleScript after remote failure. Authentication failures skip the other remote provider; local recovery remains available when cookies are unavailable. Search, library, playlists, queues, and devices never use this local fallback.
 
 ## Connect engine notes
 

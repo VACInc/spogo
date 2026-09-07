@@ -32,7 +32,7 @@ Talks to Spotify's internal Connect endpoints — the same ones the official des
 
 **Authentication**
 
-Connect always requires Spotify browser cookies. When Connect delegates an operation to the public Web API, that fallback uses the selected `--auth cookies|oauth` provider. Therefore `--engine connect --auth oauth` requires both cookies for Connect and an OAuth login for Web API fallbacks.
+Connect's internal operations require Spotify browser cookies. When Connect delegates an operation to the public Web API, that operation uses the selected `--auth cookies|oauth` provider. Missing or rejected cookie credentials are reported before any remote fallback; use explicit `--engine web --auth oauth` for cookie-free access. Commands implemented directly through the Web API, such as creating playlists, use the selected provider without an internal request.
 
 **Tradeoffs**
 
@@ -66,7 +66,7 @@ spogo --engine web --auth oauth search track "weezer"
 
 ## auto
 
-Try `connect` first, then fall back to `web` for unsupported features or rate limits. Because Connect is first, `auto` still requires browser cookies even when `--auth oauth` selects OAuth for the Web API fallback. On macOS, playback status and controls get one final fallback to the already-local Spotify.app through AppleScript after both remote engines fail, including when cookies are missing.
+Try `connect` first, then fall back to `web` for unsupported features or rate limits. Because Connect is first, `auto` still requires browser cookies for internal operations even when `--auth oauth` selects OAuth for the Web API fallback. Authentication failures skip the other remote provider. On macOS, playback status and controls can still recover through the already-local Spotify.app using AppleScript, including when cookies are missing.
 
 ```bash
 spogo --engine auto play spotify:playlist:...

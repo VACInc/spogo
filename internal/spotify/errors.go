@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/steipete/spogo/internal/cookies"
 )
 
 var (
@@ -24,6 +26,22 @@ type APIError struct {
 	// next request will succeed: Spotify may answer a post-cooldown retry with
 	// another 429 and a fresh Retry-After.
 	RetryAfter time.Duration
+}
+
+type cookieAuthenticationError struct{ error }
+
+func (e cookieAuthenticationError) Unwrap() error { return e.error }
+
+func isAuthenticationError(err error) bool {
+	var cookieErr cookieAuthenticationError
+	if errors.As(err, &cookieErr) {
+		return true
+	}
+	if errors.Is(err, cookies.ErrNoCookies) || errors.Is(err, ErrOAuthAuthentication) {
+		return true
+	}
+	var apiErr APIError
+	return errors.As(err, &apiErr) && (apiErr.Status == http.StatusUnauthorized || apiErr.Status == http.StatusForbidden)
 }
 
 func (e APIError) Error() string {

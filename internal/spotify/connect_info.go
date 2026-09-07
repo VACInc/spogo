@@ -109,8 +109,8 @@ func (c *ConnectClient) infoByOperation(ctx context.Context, operation string, v
 
 func (c *ConnectClient) infoWithWebFallback(ctx context.Context, id, kind string, connectLookup func() (Item, error), webLookup func(*Client) (Item, error)) (Item, error) {
 	item, err := connectLookup()
-	if err == nil {
-		return item, nil
+	if err == nil || isAuthenticationError(err) {
+		return item, err
 	}
 	web, werr := c.webClient()
 	if werr != nil {

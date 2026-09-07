@@ -50,7 +50,7 @@ func (c *Context) SetSpotify(client spotify.API) {
 	c.spotifyClient = client
 }
 
-func (c *Context) SaveProfile(profile config.Profile) error {
+func (c *Context) UpdateProfile(update func(*config.Profile)) error {
 	if c == nil {
 		return errors.New("nil context")
 	}
@@ -58,6 +58,8 @@ func (c *Context) SaveProfile(profile config.Profile) error {
 		return errors.New("nil config")
 	}
 	cfg, err := config.Update(c.CommandContext(), c.ConfigPath, func(cfg *config.Config) error {
+		profile := cfg.Profile(c.ProfileKey)
+		update(&profile)
 		cfg.SetProfile(c.ProfileKey, profile)
 		cfg.DefaultProfile = c.ProfileKey
 		return nil
@@ -66,7 +68,7 @@ func (c *Context) SaveProfile(profile config.Profile) error {
 		return err
 	}
 	c.Config = cfg
-	c.Profile = profile
+	c.Profile = cfg.Profile(c.ProfileKey)
 	return nil
 }
 

@@ -133,7 +133,7 @@ func TestAutoNoFallbackOnGenericError(t *testing.T) {
 	}
 }
 
-func TestAutoPlaybackFallsBackToLocalAfterBothRemoteEnginesFail(t *testing.T) {
+func TestAutoPlaybackSkipsRemoteFallbackAfterAuthenticationFailure(t *testing.T) {
 	connectCalls := map[string]int{}
 	webCalls := map[string]int{}
 	localCalls := map[string]int{}
@@ -151,7 +151,7 @@ func TestAutoPlaybackFallsBackToLocalAfterBothRemoteEnginesFail(t *testing.T) {
 	if err != nil || !playback.IsPlaying || playback.Device.Name != "Local Spotify" {
 		t.Fatalf("playback=%#v err=%v", playback, err)
 	}
-	if connectCalls["Playback"] != 1 || webCalls["Playback"] != 1 || localCalls["Playback"] != 1 {
+	if connectCalls["Playback"] != 1 || webCalls["Playback"] != 0 || localCalls["Playback"] != 1 {
 		t.Fatalf("fallback order connect=%#v web=%#v local=%#v", connectCalls, webCalls, localCalls)
 	}
 }

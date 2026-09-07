@@ -17,6 +17,9 @@ func (c *ConnectClient) search(ctx context.Context, kind, query string, limit, o
 	offset = normalizeOffset(offset)
 	payload, err := c.graphQL(ctx, "searchDesktop", searchVariables(query, limit, offset))
 	if err != nil {
+		if isAuthenticationError(err) {
+			return SearchResult{}, err
+		}
 		fallback, ferr := c.searchViaWeb(ctx, kind, query, limit, offset)
 		if ferr == nil {
 			return fallback, nil

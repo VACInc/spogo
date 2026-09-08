@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.11.0 - 2026-09-08
 
 ### Highlights
 
-- Add optional, local Spotify OAuth PKCE login for the existing Web API commands while keeping browser cookies as the default, thanks @VACInc
+- Add optional, local Spotify OAuth PKCE login for the existing Web API commands while keeping browser cookies as the default; unverified against a live Spotify app, thanks @VACInc
 
 ### Fixed
 

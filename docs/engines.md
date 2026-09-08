@@ -16,7 +16,7 @@ spogo can talk to Spotify through one of four engines. Pick whichever matches wh
 | "I just want it to work" | `auto` |
 | Drive Spotify.app on macOS, no network needed | `applescript` |
 
-Set with `--engine <name>` per call, or globally with `SPOGO_ENGINE`.
+Set with `--engine <name>` per call, or globally with `SPOGO_ENGINE`. Engine selection is separate from Web API authentication, selected with `--auth cookies|oauth` or `SPOGO_AUTH`.
 
 ## connect (default)
 
@@ -30,6 +30,10 @@ Talks to Spotify's internal Connect endpoints — the same ones the official des
 - Search and item info via the internal GraphQL surface, including episode lookup.
 - Listing followed artists, saved albums/tracks, and playlists; user top tracks and recently played history also use internal endpoints.
 
+**Authentication**
+
+Connect's internal operations require Spotify browser cookies. When Connect delegates an operation to the public Web API, that operation uses the selected `--auth cookies|oauth` provider. Missing or rejected cookie credentials are reported before any remote fallback; use explicit `--engine web --auth oauth` for cookie-free access. Commands implemented directly through the Web API, such as creating playlists, use the selected provider without an internal request.
+
 **Tradeoffs**
 
 - Saving/removing library tracks or albums, following/unfollowing artists, creating playlists, and artist-top-track lookups used by artist playback still require the public Web API.
@@ -39,6 +43,15 @@ Talks to Spotify's internal Connect endpoints — the same ones the official des
 ## web
 
 The public Spotify Web API. Slower, lower throughput, and rate-limited according to Spotify's account- and application-specific policies; cookie-derived tokens can encounter aggressive cooldowns, including retry hints measured in hours.
+
+**Authentication**
+
+Use the existing cookie-derived Web API token with `--auth cookies` (the default), or the official Authorization Code with PKCE token with `--auth oauth`. A cookie-free setup is:
+
+```bash
+spogo auth oauth login --client-id YOUR_SPOTIFY_CLIENT_ID
+spogo --engine web --auth oauth search track "weezer"
+```
 
 **Best for**
 
@@ -53,7 +66,7 @@ The public Spotify Web API. Slower, lower throughput, and rate-limited according
 
 ## auto
 
-Try `connect` first, then fall back to `web` for unsupported features or rate limits. On macOS, playback status and controls get one final fallback to the already-local Spotify.app through AppleScript after both remote engines fail, including when cookies are missing.
+Try `connect` first, then fall back to `web` for unsupported features or rate limits. Because Connect is first, `auto` still requires browser cookies for internal operations even when `--auth oauth` selects OAuth for the Web API fallback. Authentication failures skip the other remote provider. On macOS, playback status and controls can still recover through the already-local Spotify.app using AppleScript, including when cookies are missing.
 
 ```bash
 spogo --engine auto play spotify:playlist:...
@@ -92,20 +105,22 @@ Per command:
 
 ```bash
 spogo --engine connect play
-spogo --engine web search track "weezer"
+spogo --engine web --auth oauth search track "weezer"
 spogo --engine applescript pause
 ```
 
 Per shell:
 
 ```bash
-export SPOGO_ENGINE=connect
+export SPOGO_ENGINE=web
+export SPOGO_AUTH=oauth
 ```
 
 In a config profile (`~/.config/spogo/<profile>/config.toml` or platform equivalent):
 
 ```toml
-engine = "connect"
+engine = "web"
+auth = "oauth"
 ```
 
 ## Diagnosing engine issues

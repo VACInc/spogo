@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/steipete/spogo/internal/app"
+	"github.com/steipete/spogo/internal/config"
 	"github.com/steipete/spogo/internal/cookies"
 )
 
@@ -24,9 +25,9 @@ func (cmd *AuthClearCmd) Run(ctx *app.Context) error {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	profileCfg := ctx.Profile
-	profileCfg.CookiePath = ""
-	if err := ctx.SaveProfile(profileCfg); err != nil {
+	if err := ctx.UpdateProfile(func(profile *config.Profile) {
+		profile.CookiePath = ""
+	}); err != nil {
 		return err
 	}
 	if err := ctx.ClearCache(); err != nil {

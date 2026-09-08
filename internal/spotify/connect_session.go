@@ -49,6 +49,16 @@ type connectAuth struct {
 	DeviceID       string
 }
 
+type connectCookieSource struct{ cookies.Source }
+
+func (s connectCookieSource) Cookies(ctx context.Context) ([]*http.Cookie, error) {
+	list, err := s.Source.Cookies(ctx)
+	if err != nil {
+		return nil, cookieAuthenticationError{err}
+	}
+	return list, nil
+}
+
 func (s *connectSession) auth(ctx context.Context) (connectAuth, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -146,7 +156,7 @@ func (s *connectSession) ensureTokenLocked(ctx context.Context) error {
 	if s.token.AccessToken != "" && time.Until(s.token.ExpiresAt) > time.Minute {
 		return nil
 	}
-	provider := CookieTokenProvider{Source: s.source, Client: s.client}
+	provider := CookieTokenProvider{Source: connectCookieSource{s.source}, Client: s.client}
 	token, err := provider.Token(ctx)
 	if err != nil {
 		return err
@@ -166,7 +176,7 @@ func (s *connectSession) ensureAppConfigLocked(ctx context.Context) error {
 	}
 	cookiesList, err := s.source.Cookies(ctx)
 	if err != nil {
-		return err
+		return cookieAuthenticationError{err}
 	}
 	deviceID := ""
 	for _, cookie := range cookiesList {
@@ -176,7 +186,7 @@ func (s *connectSession) ensureAppConfigLocked(ctx context.Context) error {
 		}
 	}
 	if deviceID == "" {
-		return errors.New("missing sp_t cookie (run `spogo auth paste` and include sp_t from DevTools)")
+		return cookieAuthenticationError{errors.New("missing sp_t cookie (run `spogo auth paste` and include sp_t from DevTools)")}
 	}
 	jar, err := cookiejar.New(nil)
 	if err != nil {

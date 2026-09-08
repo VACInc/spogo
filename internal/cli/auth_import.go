@@ -24,12 +24,12 @@ func (cmd *AuthImportCmd) Run(ctx *app.Context) error {
 	if err != nil {
 		return err
 	}
-	profileCfg := ctx.Profile
-	profileCfg.Browser = source.Browser
-	if source.Profile != "" {
-		profileCfg.BrowserProfile = source.Profile
-	}
-	return saveCookies(ctx, cmd.CookiePath, cookiesList, profileCfg)
+	return saveCookies(ctx, cmd.CookiePath, cookiesList, func(profile *config.Profile) {
+		profile.Browser = source.Browser
+		if source.Profile != "" {
+			profile.BrowserProfile = source.Profile
+		}
+	})
 }
 
 func normalizeBrowserName(primary, fallback string) string {
@@ -51,15 +51,19 @@ func normalizeBrowserProfile(primary, fallback string) string {
 	return profile
 }
 
-func saveCookies(ctx *app.Context, path string, cookiesList []*http.Cookie, profileCfg config.Profile) error {
+func saveCookies(ctx *app.Context, path string, cookiesList []*http.Cookie, update func(*config.Profile)) error {
 	if path == "" {
 		path = ctx.ResolveCookiePath()
 	}
 	if err := cookies.Write(path, cookiesList); err != nil {
 		return err
 	}
-	profileCfg.CookiePath = path
-	if err := ctx.SaveProfile(profileCfg); err != nil {
+	if err := ctx.UpdateProfile(func(profile *config.Profile) {
+		profile.CookiePath = path
+		if update != nil {
+			update(profile)
+		}
+	}); err != nil {
 		return err
 	}
 	if err := ctx.ClearCache(); err != nil {

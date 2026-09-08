@@ -68,7 +68,7 @@ func autoPlaybackCall[T any](c *autoClient, fn func(API) (T, error)) (T, error) 
 	if err == nil {
 		return result, nil
 	}
-	if c.secondary != nil && (c.local != nil || c.shouldFallback(err)) {
+	if c.secondary != nil && !isAuthenticationError(err) && (c.local != nil || c.shouldFallback(err)) {
 		fallback, fallbackErr := fn(c.secondary)
 		if fallbackErr == nil {
 			return fallback, nil
@@ -88,7 +88,7 @@ func autoPlaybackVoid(c *autoClient, fn func(API) error) error {
 	if err == nil {
 		return nil
 	}
-	if c.secondary != nil && (c.local != nil || c.shouldFallback(err)) {
+	if c.secondary != nil && !isAuthenticationError(err) && (c.local != nil || c.shouldFallback(err)) {
 		fallbackErr := fn(c.secondary)
 		if fallbackErr == nil {
 			return nil

@@ -17,6 +17,7 @@ type ConnectOptions struct {
 	Device    string
 	Timeout   time.Duration
 	CachePath string
+	WebClient *Client
 }
 
 type ConnectClient struct {
@@ -29,7 +30,6 @@ type ConnectClient struct {
 	hashes       *hashResolver
 	webMu        sync.Mutex
 	web          *Client
-	searchURL    string
 	searchClient *http.Client
 
 	cache *connectCacheStore
@@ -64,6 +64,7 @@ func NewConnectClient(opts ConnectOptions) (*ConnectClient, error) {
 		session:  session,
 		hashes:   newHashResolver(httpClient, session),
 		cache:    cache,
+		web:      opts.WebClient,
 	}, nil
 }
 
@@ -177,8 +178,8 @@ func (c *ConnectClient) FollowArtists(ctx context.Context, ids []string, method 
 
 func (c *ConnectClient) FollowedArtists(ctx context.Context, limit int, after string) ([]Item, int, string, error) {
 	items, total, next, err := c.followedArtists(ctx, limit, after)
-	if err == nil {
-		return items, total, next, nil
+	if err == nil || isAuthenticationError(err) {
+		return items, total, next, err
 	}
 	return withWebCursorFallback(c, func(web *Client) ([]Item, int, string, error) {
 		return web.FollowedArtists(ctx, limit, after)
@@ -210,7 +211,7 @@ func (c *ConnectClient) CreatePlaylist(ctx context.Context, name string, public,
 func (c *ConnectClient) AddTracks(ctx context.Context, playlistID string, uris []string) error {
 	if err := c.addTracks(ctx, playlistID, uris); err == nil {
 		return nil
-	} else if errors.Is(err, errPlaylistNotWritable) {
+	} else if errors.Is(err, errPlaylistNotWritable) || isAuthenticationError(err) {
 		return err
 	}
 	return withWebFallback(c, func(web *Client) error {
@@ -221,7 +222,7 @@ func (c *ConnectClient) AddTracks(ctx context.Context, playlistID string, uris [
 func (c *ConnectClient) RemoveTracks(ctx context.Context, playlistID string, uris []string) error {
 	if err := c.removeTracks(ctx, playlistID, uris); err == nil {
 		return nil
-	} else if errors.Is(err, errPlaylistNotWritable) {
+	} else if errors.Is(err, errPlaylistNotWritable) || isAuthenticationError(err) {
 		return err
 	}
 	return withWebFallback(c, func(web *Client) error {
@@ -239,8 +240,8 @@ func (c *ConnectClient) GetRecentlyPlayed(ctx context.Context, limit int, after,
 
 func withWebCollectionFallback(c *ConnectClient, primary func() ([]Item, int, error), fallback func(*Client) ([]Item, int, error)) ([]Item, int, error) {
 	items, total, err := primary()
-	if err == nil {
-		return items, total, nil
+	if err == nil || isAuthenticationError(err) {
+		return items, total, err
 	}
 	web, werr := c.webClient()
 	if werr != nil {

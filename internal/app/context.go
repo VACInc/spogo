@@ -13,19 +13,22 @@ import (
 )
 
 type Settings struct {
-	ConfigPath string
-	Profile    string
-	Timeout    time.Duration
-	Market     string
-	Language   string
-	Device     string
-	Engine     string
-	Format     output.Format
-	NoColor    bool
-	Quiet      bool
-	Verbose    bool
-	Debug      bool
-	NoInput    bool
+	ConfigPath         string
+	Profile            string
+	Timeout            time.Duration
+	Market             string
+	Language           string
+	Device             string
+	Engine             string
+	Auth               string
+	SpotifyClientID    string
+	SpotifyRedirectURI string
+	Format             output.Format
+	NoColor            bool
+	Quiet              bool
+	Verbose            bool
+	Debug              bool
+	NoInput            bool
 }
 
 type Context struct {
@@ -47,20 +50,25 @@ func (c *Context) SetSpotify(client spotify.API) {
 	c.spotifyClient = client
 }
 
-func (c *Context) SaveProfile(profile config.Profile) error {
+func (c *Context) UpdateProfile(update func(*config.Profile)) error {
 	if c == nil {
 		return errors.New("nil context")
 	}
 	if c.Config == nil {
 		return errors.New("nil config")
 	}
-	cfg := c.Config
-	cfg.SetProfile(c.ProfileKey, profile)
-	cfg.DefaultProfile = c.ProfileKey
-	if err := config.Save(c.ConfigPath, cfg); err != nil {
+	cfg, err := config.Update(c.CommandContext(), c.ConfigPath, func(cfg *config.Config) error {
+		profile := cfg.Profile(c.ProfileKey)
+		update(&profile)
+		cfg.SetProfile(c.ProfileKey, profile)
+		cfg.DefaultProfile = c.ProfileKey
+		return nil
+	})
+	if err != nil {
 		return err
 	}
-	c.Profile = profile
+	c.Config = cfg
+	c.Profile = cfg.Profile(c.ProfileKey)
 	return nil
 }
 
@@ -70,6 +78,10 @@ func (c *Context) ResolveCookiePath() string {
 
 func (c *Context) ResolveCachePath() string {
 	return config.CachePath(c.ConfigPath, c.ProfileKey)
+}
+
+func (c *Context) ResolveOAuthTokenPath() string {
+	return config.OAuthTokenPath(c.ConfigPath, c.ProfileKey)
 }
 
 func (c *Context) ClearCache() error {

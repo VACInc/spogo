@@ -37,7 +37,7 @@ func (cmd *AuthPasteCmd) Run(ctx *app.Context) error {
 	if values.spt == "" && warnsOnMissingDeviceCookie(ctx.Profile.Engine) {
 		_, _ = fmt.Fprintln(ctx.Output.Err, "warning: missing sp_t; playback may fail (grab sp_t from DevTools)")
 	}
-	return saveCookies(ctx, cmd.CookiePath, cookiesList, ctx.Profile)
+	return saveCookies(ctx, cmd.CookiePath, cookiesList, nil)
 }
 
 func readPastedCookies(r io.Reader, out *output.Writer, interactive bool) (pastedCookies, error) {

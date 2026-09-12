@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Highlights
+
+- Follow, unfollow, and check playlist membership from the terminal with `playlist follow|unfollow|following`; verified against a synthetic Spotify server, not a live account, thanks @yashiels
+
 ### Changed
 
 - Refresh Go crypto, system, synchronization, module, analysis, and formatting dependencies while retaining Go 1.26.7 support

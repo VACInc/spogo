@@ -294,6 +294,26 @@ func (c *autoClient) RemoveTracks(ctx context.Context, playlistID string, uris [
 	})
 }
 
+func (c *autoClient) FollowPlaylist(ctx context.Context, id string) error {
+	return c.playlistClient().FollowPlaylist(ctx, id)
+}
+
+func (c *autoClient) UnfollowPlaylist(ctx context.Context, id string) error {
+	return c.playlistClient().UnfollowPlaylist(ctx, id)
+}
+
+func (c *autoClient) IsFollowingPlaylist(ctx context.Context, id string) (bool, error) {
+	return c.playlistClient().IsFollowingPlaylist(ctx, id)
+}
+
+func (c *autoClient) playlistClient() API {
+	// Connect membership methods use this same Web API; retrying both repeats a cooldown.
+	if c.secondary != nil {
+		return c.secondary
+	}
+	return c.primary
+}
+
 func (c *autoClient) GetUsersTopTracks(ctx context.Context, timeRange string, limit, offset int) (TopTracksResult, error) {
 	return autoCall(c, func(api API) (TopTracksResult, error) {
 		return api.GetUsersTopTracks(ctx, timeRange, limit, offset)

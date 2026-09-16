@@ -131,3 +131,28 @@ func TestPlaybackPreservesCanceledDeviceLookup(t *testing.T) {
 		t.Fatalf("error = %v, want context canceled", err)
 	}
 }
+
+func TestPlaybackRejectsNamedDeviceWithoutID(t *testing.T) {
+	playCalled := false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/me/player/devices", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"devices":[{"id":null,"name":"Desk Speaker"}]}`))
+	})
+	mux.HandleFunc("/me/player/play", func(http.ResponseWriter, *http.Request) {
+		playCalled = true
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	client, err := NewClient(Options{TokenProvider: staticTokenProvider{}, BaseURL: srv.URL, Device: "Desk Speaker"})
+	if err != nil {
+		t.Fatalf("client: %v", err)
+	}
+	err = client.Play(context.Background(), "spotify:track:t1")
+	if err == nil || err.Error() != `device "Desk Speaker" has no usable ID` {
+		t.Fatalf("error = %v, want unusable device ID error", err)
+	}
+	if playCalled {
+		t.Fatal("play request should not run for a device without an ID")
+	}
+}

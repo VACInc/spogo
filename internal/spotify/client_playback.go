@@ -163,6 +163,9 @@ func (c *Client) playbackParams(ctx context.Context, params url.Values) (url.Val
 	}
 	for _, device := range devices {
 		if strings.EqualFold(device.ID, c.device) || strings.EqualFold(device.Name, c.device) {
+			if device.ID == "" {
+				return nil, fmt.Errorf("device %q has no usable ID", c.device)
+			}
 			params.Set("device_id", device.ID)
 			return params, nil
 		}

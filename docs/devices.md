@@ -29,8 +29,10 @@ Transfers playback to the named device (case-insensitive exact match) or device 
 ## --device flag (per-command)
 
 `--device` is a global flag. The Web API resolves a case-insensitive exact
-device name to its current device ID before playback commands; an ID is passed
-through directly. Connect uses the selector to find a target for `play` when no
+device name to its current device ID when a playback command rejects the
+selector as not found. Raw device IDs are passed through unchanged and do not
+require device-list access when accepted. Across engines, IDs are case-sensitive
+and exact ID matches take priority over names. Connect uses the selector to find a target for `play` when no
 device is active:
 
 ```bash

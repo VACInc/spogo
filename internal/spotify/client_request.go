@@ -23,14 +23,6 @@ func (c *Client) postJSON(ctx context.Context, path string, payload any, dest an
 	return c.send(ctx, http.MethodPost, path, nil, payload, dest)
 }
 
-func (c *Client) putParams(ctx context.Context, path string, params url.Values) error {
-	return c.send(ctx, http.MethodPut, path, params, nil, nil)
-}
-
-func (c *Client) postParams(ctx context.Context, path string, params url.Values) error {
-	return c.send(ctx, http.MethodPost, path, params, nil, nil)
-}
-
 func (c *Client) send(ctx context.Context, method, path string, params url.Values, payload any, dest any) error {
 	const (
 		maxAttempts   = 3

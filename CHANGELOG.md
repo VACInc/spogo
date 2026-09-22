@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Resolve `--device` names to Spotify device IDs for Web API playback commands, and stop attaching playback-only device parameters to unrelated mutations
+- Resolve `--device` names to Spotify device IDs for Web API playback commands, keep opaque IDs case-sensitive across engines, and stop attaching playback-only device parameters to unrelated mutations, thanks @VACInc
 
 - Reject negative, malformed, and overflowing seek positions before playback; preserve large valid millisecond values and include pagination offsets in top-track ranks
 
